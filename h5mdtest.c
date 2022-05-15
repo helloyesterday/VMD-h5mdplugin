@@ -27,7 +27,7 @@
 #include <string.h>
 #include "molfile_plugin.h"
 
-/* Structure and coordintes plugin */
+/* Structure and coordinates plugin */
 static molfile_plugin_t *splugin = 0;
 static molfile_plugin_t *cplugin = 0;
 static const char *sfiletype = NULL;

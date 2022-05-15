@@ -189,7 +189,7 @@ int check_compatibility(struct h5md_file* file, hid_t new_pos_dataset_id){
 }
 
 // opens the file, creates the internal structure and goes to the first timestep
-// you have to use double pointers in order to be able to change a pointer in a foreing function
+// you have to use double pointers in order to be able to change a pointer in a foreign function
 int h5md_open(struct h5md_file** _file, const char *filename, int can_write){
 	struct h5md_file *file = malloc(sizeof(struct h5md_file));
 
@@ -247,13 +247,13 @@ int h5md_get_ntime(struct h5md_file* file,int* ntime){
 	return 0;
 }
 
-// get number of atoms iff this number is constant during time
+// get number of atoms if this number is constant during time
 int h5md_get_natoms(struct h5md_file* file, int* natoms){
 	*natoms=file->natoms;
 	return 0;
 }
 
-//set number of atoms iff this number is constant during time
+//set number of atoms if this number is constant during time
 int h5md_set_natoms(struct h5md_file* file, int natoms){
 	file->natoms=natoms;
 	return 0;
@@ -989,7 +989,7 @@ int h5md_get_file_id(struct h5md_file *file, hid_t *file_id){
 }
 
 /* write operations */
-//creates a h5md_file iff it does not exist yet
+//creates a h5md_file if it does not exist yet
 int h5md_create_file(struct h5md_file **_file, const char* filename){
 	struct h5md_file *file = (struct h5md_file*) malloc(sizeof(struct h5md_file));
 	initialize_h5md_struct(file);

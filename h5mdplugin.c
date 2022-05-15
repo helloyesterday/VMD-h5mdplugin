@@ -10,8 +10,9 @@
  *      $Author: Jonas Landsgesell, Sascha Ehrhardt S$
  *      $Revision: 1.5 $       $Date: 2014/03/27 19:03:00 $
  *
+ *      $Slightly modified by Yi Isaac Yang at 2022/05/15 $
+ *
  ***************************************************************************/
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@
 #include "libh5md.h"
 
 //element symbols
+// Add elements 112 to 118 by Yi Isaac Yang
 static const char *element_symbols[] = { 
     "X",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne",
     "Na", "Mg", "Al", "Si", "P" , "S",  "Cl", "Ar", "K",  "Ca", "Sc",
@@ -34,18 +36,17 @@ static const char *element_symbols[] = {
     "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr",
     "Ra", "Ac", "Th", "Pa", "U",  "Np", "Pu", "Am", "Cm", "Bk", "Cf",
     "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt",
-    "Ds", "Rg"
+    "Ds", "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"
 };
 
-const char default_name[16]="O";
-const char default_type[16]="O";
+// Modified by Yi Isaac Yang
+const char default_name[16]="X";
+const char default_type[16]="X";
 const char default_resname[8]="";
 const int default_resid= 1;
 const char default_segid[8]= "";
 const char default_chain[2]= "";
 const char default_altloc[2]= "";
-const char default_insertion[2]= "";
-const float default_occupancy= 1.0;
 const float default_bfactor= 1.0; 
 const float default_mass= 1.0;
 const float default_charge= 0.0;
@@ -132,7 +133,7 @@ int count_different_species(int *data_species, int length){
 	int count =0;
 	for(int i=0;i<length;i++){
 		if(find_first_index_in_array(data_species,i,length)==i){
-			count+=1; //add plus 1 if the first occurance of a species happens at the current index i since then a new species is found
+			count+=1; //add plus 1 if the first occurrence of a species happens at the current index i since then a new species is found
 		}	
 	}
 	return count;
@@ -155,7 +156,8 @@ int check_consistency_species_index_of_species(struct h5md_file *file, int len_d
 //load whole VMD structure
 int read_h5md_structure_vmd_structure(void *_file, int *optflags,molfile_atom_t *atoms) {
 	molfile_atom_t *atom;
-	*optflags = MOLFILE_ATOMICNUMBER | MOLFILE_MASS | MOLFILE_RADIUS |  MOLFILE_INSERTION | MOLFILE_CHARGE; // we read the optional attributes atomicnumber, mass, radius and charge
+	// Removed "MOLFILE_INSERTION" by Yi Isaac Yang, which will cause the error when VMD converts the H5MD file to pdb file.
+	*optflags = MOLFILE_ATOMICNUMBER | MOLFILE_MASS | MOLFILE_RADIUS |  MOLFILE_CHARGE; // we read the optional attributes atomicnumber, mass, radius and charge
 	struct h5md_file* file=_file;
 	int natoms;
 	h5md_get_natoms(file, &natoms);
@@ -288,7 +290,7 @@ int read_h5md_structure_vmd_structure(void *_file, int *optflags,molfile_atom_t 
 		else
 			strncpy(atom->segid,default_segid,sizeof(8));
 		if(status_read_resid==0)
-			atom->resid=data_resid[i];	//set resid
+			atom->resid=data_resid[i]+1;	//set resid
 		else
 			atom->resid=default_resid;
 		if(status_read_resname==0)		
@@ -394,13 +396,15 @@ VMDPLUGIN_API int VMDPLUGIN_init() {
 	memset(&plugin, 0, sizeof(molfile_plugin_t));
 	plugin.abiversion = vmdplugin_ABIVERSION;
 	plugin.type = MOLFILE_PLUGIN_TYPE;
-	plugin.name = "h5md";
-	plugin.prettyname = "h5md";
+	// Modified by Yi Isaac Yang
+	plugin.name = "H5MD";
+	plugin.prettyname = "H5MD (HDF5 Molecular Data)";
 	plugin.author = "Sascha Ehrhardt, Jonas Landsgesell";
 	plugin.majorv = 1;
 	plugin.minorv = 5;
 	plugin.is_reentrant = VMDPLUGIN_THREADSAFE;
-	plugin.filename_extension = "h5";
+	// Change the extension name from "h5" to "h5md" by Yi Isaac Yang, in order to be consistent with MDAnalysis
+	plugin.filename_extension = "h5md";
 	plugin.open_file_read = open_h5md_read;
 	plugin.read_structure = read_h5md_structure_vmd_structure;
 	plugin.read_next_timestep = read_h5md_timestep;

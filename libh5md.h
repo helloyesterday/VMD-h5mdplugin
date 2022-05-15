@@ -13,7 +13,7 @@ void h5md_show_hdf5_error_messages();
 
 /*read operations*/
 
-// opens the file, iff it exists and creates the internal structure and goes to the first timestep
+// opens the file, if it exists and creates the internal structure and goes to the first timestep
 int h5md_open(struct h5md_file** _file, const char *filename, int can_open);
 
 // close the file and frees the internal structure
@@ -37,7 +37,7 @@ int h5md_unfold_positions(struct h5md_file* file, float* unsorted_folded_pos);
 //sort data according to id datasets
 int h5md_sort_data_according_to_id_datasets(struct h5md_file* file, float* to_be_sorted_data);
 
-//reads all box informations of all groups, returns only the box information of the first group (since VMD doesn't support more than one box per file), the returned array has length 6 (3 lengths: A, B, C, and 3 angles alpha, beta, gamma)
+//reads all box information of all groups, returns only the box information of the first group (since VMD doesn't support more than one box per file), the returned array has length 6 (3 lengths: A, B, C, and 3 angles alpha, beta, gamma)
 int h5md_get_box_information(struct h5md_file* file, float* out_box_information);
 
 //reads the number of atoms
