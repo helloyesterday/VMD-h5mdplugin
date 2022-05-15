@@ -708,7 +708,8 @@ int get_box_information(struct h5md_file* file, int group_number, int time_i, h5
 			box->gamma=calculate_angle_between_vectors(vector_a,vector_b,3);
 		}else{
 			status=-1;
-			printf("No box information found\n");
+			// Removed by Yi Isaac Yang
+			// printf("No box information found\n");
 		}
 	}
 
