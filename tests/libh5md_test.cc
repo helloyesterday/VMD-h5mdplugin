@@ -47,7 +47,7 @@ int test_write_file_with_datasets(){
 //	int status;
 // 	h5md_open(&file, "./samples/test_write.h5", 1);
 //	//writing fixed length strings not yet working, probably better to give h5md_write another argument string_length (see http://www.hdfgroup.org/ftp/HDF5/examples/examples-by-api/hdf5-examples/1_8/C/H5T/h5ex_t_string.c) with the following properties, e.g. like
-//	//string_length= 0 iff data_in are not strings
+//	//string_length= 0 if data_in are not strings
 //	//string_length >0 <-> strings have length string_length
 //	//string_length <0 <-> strings have length H5T_VARIABLE
 //	char* data_in3[4]={"xxxxx","zzz1","ggg2","sss3"};
