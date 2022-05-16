@@ -10,7 +10,7 @@
  *      $Author: Jonas Landsgesell, Sascha Ehrhardt S$
  *      $Revision: 1.5 $       $Date: 2014/03/27 19:03:00 $
  *
- *      $Slightly modified by Yi Isaac Yang at 2022/05/15 $
+ *      $Modified by Yi Isaac Yang$     $Date: 2022/05/15 $
  *
  ***************************************************************************/
 
@@ -24,7 +24,6 @@
 #include "libh5md.h"
 
 //element symbols
-// Add elements 112 to 118 by Yi Isaac Yang
 static const char *element_symbols[] = { 
     "X",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne",
     "Na", "Mg", "Al", "Si", "P" , "S",  "Cl", "Ar", "K",  "Ca", "Sc",
@@ -39,7 +38,34 @@ static const char *element_symbols[] = {
     "Ds", "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"
 };
 
-// Modified by Yi Isaac Yang
+static const float atomic_radii[] = {
+	0.00, 1.00, 1.40, 1.82, 2.00, 2.00, 1.70, 1.55, 1.52, 1.47, 1.54,
+	1.36, 1.18, 2.00, 2.10, 1.80, 1.80, 2.27, 1.88, 1.76, 1.37, 2.00,
+	2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 1.63, 1.40, 1.39, 1.07, 2.00,
+	1.85, 1.90, 1.85, 2.02, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 2.00, 1.63, 1.72, 1.58, 1.93, 2.17, 2.00, 2.06, 1.98, 2.16,
+	2.10, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 1.72, 1.66, 1.55, 1.96, 2.02, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 2.00, 2.00, 2.00, 1.86, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00,
+	2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00, 2.00
+};
+
+static const float atomic_mass[] = {
+	0.000,	1.008,	4.003,	6.941,	9.012,	10.81,	12.01,	14.01,	16.00,	19.00,	20.18,
+	22.99,	24.31,	26.98,	28.09,	30.97,	32.07,	35.45,	39.95,	39.10,	40.08,	44.96,
+	47.87,	50.94,	52.00,	54.94,	55.85,	58.93,	58.69,	63.55,	65.38,	69.72,	72.64,
+	74.92,	78.97,	79.90,	83.80,	85.47,	87.62,	88.91,	91.22,	92.91,	95.95,	98.91,
+	101.07,	102.91,	106.42,	107.87,	112.41,	114.82,	118.71,	121.76,	127.60,	126.90,	131.29,
+	132.91,	137.33,	138.91,	140.12,	140.91,	144.24,	144.90,	150.36,	151.96,	157.25,	158.93,
+	162.50,	164.93,	167.26,	168.93,	173.05,	174.97,	178.49,	180.95,	183.84,	186.21,	190.23,
+	192.22,	195.08,	196.97,	200.59,	204.38,	207.20,	208.98,	208.98,	209.99,	222.02,	223.02,
+	226.02,	227.03,	232.04,	231.04,	238.03,	237.05,	239.06,	243.06,	247.07,	247.07,	251.08,
+	252.08,	257.06,	258.10,	259.10,	262.11,	267.12,	268.13,	269.13,	274.14,	277.15,	278.00,
+	281.00,	282.00,	285.00,	284.00,	289.00,	288.00,	292.00,	294.00,	295.00,
+};
+
 const char default_name[16]="X";
 const char default_type[16]="X";
 const char default_resname[8]="";
@@ -50,7 +76,6 @@ const char default_altloc[2]= "";
 const float default_bfactor= 1.0; 
 const float default_mass= 1.0;
 const float default_charge= 0.0;
-const float default_radius= 0.5;
 const int default_atomicnumber= 1;
 
 static void *open_h5md_read(const char *filename, const char *filetype, int *natoms){
@@ -156,7 +181,6 @@ int check_consistency_species_index_of_species(struct h5md_file *file, int len_d
 //load whole VMD structure
 int read_h5md_structure_vmd_structure(void *_file, int *optflags,molfile_atom_t *atoms) {
 	molfile_atom_t *atom;
-	// Removed "MOLFILE_INSERTION" by Yi Isaac Yang, which will cause the error when VMD converts the H5MD file to pdb file.
 	*optflags = MOLFILE_ATOMICNUMBER | MOLFILE_MASS | MOLFILE_RADIUS |  MOLFILE_CHARGE; // we read the optional attributes atomicnumber, mass, radius and charge
 	struct h5md_file* file=_file;
 	int natoms;
@@ -276,11 +300,11 @@ int read_h5md_structure_vmd_structure(void *_file, int *optflags,molfile_atom_t 
 		if(status_read_mass==0 && status_index_species==0 && index_of_species>=0)
 			atom->mass = data_mass[i];	//set mass for atom of with id i
 		else
-			atom->mass=default_mass;
+			atom->mass = atomic_mass[atom->atomicnumber];
 		if(status_read_radius==0 && status_index_species==0 && index_of_species>=0)	
 			atom->radius = data_radius[index_of_species];	//set radius for atom of species
 		else
-			atom->radius=default_radius;
+			atom->radius = atomic_radii[atom->atomicnumber];
 		if(status_read_charge==0)
 			atom->charge=data_charge[i];	//set charge
 		else
@@ -381,7 +405,7 @@ static int write_h5md_timestep(void* _file, const molfile_timestep_t *ts){
 	dims_in[1] =natoms;
 	dims_in[2] =3; //number of space dimensions
 
-	int status= h5md_append_dataset(file, "/particles/atoms/position/value", H5T_NATIVE_FLOAT, (void*) ts->coords, rank_in, dims_in);
+	int status= h5md_append_dataset(file, "/particles/trajectory/position/value", H5T_NATIVE_FLOAT, (void*) ts->coords, rank_in, dims_in);
 	
 	if(status==0)
 		return MOLFILE_SUCCESS;
@@ -396,14 +420,12 @@ VMDPLUGIN_API int VMDPLUGIN_init() {
 	memset(&plugin, 0, sizeof(molfile_plugin_t));
 	plugin.abiversion = vmdplugin_ABIVERSION;
 	plugin.type = MOLFILE_PLUGIN_TYPE;
-	// Modified by Yi Isaac Yang
 	plugin.name = "H5MD";
 	plugin.prettyname = "H5MD (HDF5 Molecular Data)";
-	plugin.author = "Sascha Ehrhardt, Jonas Landsgesell";
+	plugin.author = "Sascha Ehrhardt, Jonas Landsgesell.";
 	plugin.majorv = 1;
 	plugin.minorv = 5;
 	plugin.is_reentrant = VMDPLUGIN_THREADSAFE;
-	// Change the extension name from "h5" to "h5md" by Yi Isaac Yang, in order to be consistent with MDAnalysis
 	plugin.filename_extension = "h5md";
 	plugin.open_file_read = open_h5md_read;
 	plugin.read_structure = read_h5md_structure_vmd_structure;
