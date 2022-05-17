@@ -36,6 +36,7 @@ typedef struct h5md_group{
 	char* group_path;
 	int natoms_group;
 	int nspacedims;
+	float pos_unit_scale;
 	hid_t pos_dataset_id;
 	hid_t species_dataset_id;
 	hid_t mass_dataset_id;
@@ -93,7 +94,7 @@ herr_t check_for_pos_dataset( hid_t g_id, const char* obj_name, const H5L_info_t
 
 			if(pos_dataset_id>=0)
 				status=modify_information_about_file_content(file, dirname((char*)obj_name));
-				printf("Position dataset found in group /%s.\n", obj_name);
+				printf("Info) Position dataset found in group /%s.\n", obj_name);
 		}
 	}
 	return status;	//if status is 0 search for other position datasets continues. If status is negative, search is aborted.
@@ -107,6 +108,29 @@ int modify_information_about_file_content(struct h5md_file* file, char* group_na
 	//get pos_dataset_id
 	char* full_path_position_dataset=concatenate_strings((const char*) group_name,(const char*) "/position/value");	
 	hid_t pos_dataset_id=H5Dopen2(file->file_id, full_path_position_dataset ,H5P_DEFAULT);
+
+	float pos_unit_scale = 1;
+	if (H5Aexists(pos_dataset_id, "unit"))
+	{
+		hid_t pos_unit_id = H5Aopen(pos_dataset_id, "unit", H5P_DEFAULT);
+		hsize_t unit_size = H5Aget_storage_size(pos_unit_id) + 1;
+		char **unit = (char **)malloc(unit_size * sizeof(char *));
+		hid_t memtype = H5Tcopy(H5T_C_S1);
+		H5Tset_size(memtype, H5T_VARIABLE);
+		int status_read = H5Aread(pos_unit_id, memtype, unit);
+		status = status_read;
+		H5Tclose(memtype); // close memtype
+		H5Aclose(pos_unit_id);
+
+		if (strcmp(*unit, "nm") == 0)
+			pos_unit_scale = 10;
+		else if (strcmp(*unit, "um") == 0)
+			pos_unit_scale = 1e4;
+		else if (strcmp(*unit, "pm") == 0)
+			pos_unit_scale = 1e-2;
+		printf("Info) Coordinate unit: %s, unit scale: %f.\n", *unit, pos_unit_scale);
+	}
+
 	free(full_path_position_dataset);
 
 	//get species_dataset_id for timeindependent species dataset (a timedependent dataset would be located under /species/value)
@@ -139,6 +163,7 @@ int modify_information_about_file_content(struct h5md_file* file, char* group_na
 		file->ngroups+=1;
 		h5md_group* groups=(h5md_group*) realloc(file->groups, sizeof(h5md_group)*(file->ngroups));	//effectively appends one entry to array
 
+		groups[file->ngroups-1].pos_unit_scale = pos_unit_scale;
 		groups[file->ngroups-1].pos_dataset_id=pos_dataset_id;
 		groups[file->ngroups-1].species_dataset_id=species_dataset_id;
 		groups[file->ngroups-1].mass_dataset_id=mass_dataset_id;
@@ -166,7 +191,7 @@ int modify_information_about_file_content(struct h5md_file* file, char* group_na
 		file->groups=groups;
 		status=0;
 	}else{
-		printf("position datasets are not compatible\n");
+		printf("Info) position datasets are not compatible\n");
 		status=-1;
 	}
 	return status;
@@ -303,7 +328,7 @@ idmapper_node* insert_id(idmapper_node* root, int id, int current_index_in_datas
 		}else if(id>root->id){
 			root->right=insert_id(root->right,id,current_index_in_dataset);
 		}else if(id==root->id && id>=0){
-			printf("ERROR: id dataset is not unique in id %d, current index in dataset %d\n", id, current_index_in_dataset);
+			printf("ERROR) id dataset is not unique in id %d, current index in dataset %d\n", id, current_index_in_dataset);
 			return NULL;
 		}else if(id<0){
 			//NOTE: Found negative id in id dataset. This is typically a hint for a file which contains a variable number of particles from a grand canonical simulation.
@@ -317,7 +342,7 @@ int search_current_index_of_particle_id(idmapper_node* root, int id){
 	int current_index_of_particle_id=-1;
 	if(root==NULL){
 		if(file_contains_variable_number_of_particles==FALSE)
-			printf("ERROR: id not found in tree or no correct root provided. id %d is not unique. \n", id);
+			printf("ERROR) id not found in tree or no correct root provided. id %d is not unique. \n", id);
 		return -1;
 	}else if(id<root->id){
 		current_index_of_particle_id= search_current_index_of_particle_id(root->left,id);
@@ -397,8 +422,8 @@ void sort_data_according_to_id_dataset(struct h5md_file* file, int group_number,
 				insert_id(root,data_out_local_id[particle_i],particle_i);
 			}
 		}
-		//sort data_out_local_pos using the binary tree	
-		float _data_out_local_pos_sorted[3*file->groups[i].natoms_group];
+		//sort data_out_local_pos using the binary tree
+		float _data_out_local_pos_sorted[3 * file->groups[i].natoms_group];
 		for(int particle_id=0;particle_id<file->groups[i].natoms_group;particle_id++){
 			int current_index_of_particle_id=search_current_index_of_particle_id(root,particle_id);
 /*				printf("particle with id %d has current index %d at current time %d at x position %f\n", particle_id, current_index_of_particle_id, file->current_time, to_be_sorted_data[3*current_index_of_particle_id+0]);*/
@@ -489,6 +514,16 @@ int h5md_get_timestep(struct h5md_file* file, float *coords){
 		H5Sclose(memspace_id); //close resources
 		H5Sclose(dataspace_pos_id);
 
+		float pos_unit_scale = file->groups[i].pos_unit_scale;
+		if (pos_unit_scale!=1.0)
+		{
+			for (int j = 0; j < file->groups[i].nspacedims * file->groups[i].natoms_group; j = j + 3)
+			{
+				data_out_local_pos[j] *= pos_unit_scale;
+				data_out_local_pos[j + 1] *= pos_unit_scale;
+				data_out_local_pos[j + 2] *= pos_unit_scale;
+			}
+		}
 		//memcpy to data_out
 		memcpy(&(coords[3*previous_atoms]), data_out_local_pos,sizeof(float)*3*file->groups[i].natoms_group);
 		
@@ -708,8 +743,6 @@ int get_box_information(struct h5md_file* file, int group_number, int time_i, h5
 			box->gamma=calculate_angle_between_vectors(vector_a,vector_b,3);
 		}else{
 			status=-1;
-			// Removed by Yi Isaac Yang
-			// printf("No box information found\n");
 		}
 	}
 
@@ -829,7 +862,7 @@ int h5md_read_timeindependent_dataset_automatically(struct h5md_file* file, char
 	break;
 
 	default:{
-			printf("Dataset contains datatype that is not H5T_INTEGER, H5T_FLOAT or H5T_STRING. Not implemented case.\n");
+			printf("Warning) Dataset contains datatype that is not H5T_INTEGER, H5T_FLOAT or H5T_STRING. Not implemented case.\n");
 			status=-1;
 		}
 	break;
@@ -1001,7 +1034,7 @@ int h5md_create_file(struct h5md_file **_file, const char* filename){
 	h5md_set_creator(file, NULL, NULL);
 	*(_file)=file;
 	if(file_id<0){
-		printf("ERROR: A file with this filename already exists.\n");
+		printf("ERROR) A file with this filename already exists.\n");
 		return -1;
 	}else{
 		return 0;
@@ -1087,7 +1120,7 @@ int h5md_append_dataset(struct h5md_file *file, char* absolute_name_of_dataset, 
 
 		//check consistency // 
 		if(rank_in != rank_dataset_read || H5Tget_class(datatype) != type_class_read){
-			printf("Data cannot be appended to dataset.\n");
+			printf("Warning) Data cannot be appended to dataset.\n");
 			status=-1;
 		}else{
 			//append to dataset, compare http://www.hdfgroup.org/HDF5/doc/H5.intro.html#Intro-PMCreateExtendible and linked example there
@@ -1154,7 +1187,7 @@ int get_fill_value(struct h5md_file* file, char* absolute_name_of_dataset, void*
 		}
 		default:
 			status=-1;
-			printf("datatype not implemented\n");
+			printf("Warning) datatype not implemented\n");
 		break;
 	}
 
