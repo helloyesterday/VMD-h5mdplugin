@@ -90,4 +90,7 @@ int get_fill_value(struct h5md_file* file, char* absolute_name_of_dataset, void*
 //deletes a dataset
 int h5md_delete_dataset(struct h5md_file* file, char* absolute_name_of_dataset);
 
+// get the unit scale of dataset
+float get_unit_scale(hid_t dataset_id);
+
 #endif
