@@ -115,7 +115,7 @@ static int read_h5md_timestep(void *_file, int natoms, molfile_timestep_t *ts) {
 		ts->physical_time = 0.0;
 		//read coords
 		h5md_get_timestep(file, ts->coords);
-		// h5md_unfold_positions(file, ts->coords);
+		h5md_unfold_positions(file, ts->coords);
 		h5md_sort_data_according_to_id_datasets(file, ts->coords);
 
 	}

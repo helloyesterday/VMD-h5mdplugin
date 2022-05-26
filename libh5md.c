@@ -100,7 +100,7 @@ herr_t check_for_pos_dataset( hid_t g_id, const char* obj_name, const H5L_info_t
 	return status;	//if status is 0 search for other position datasets continues. If status is negative, search is aborted.
 }
 
-float get_unit_scale(hid_t dataset_id)
+float get_unit_scale(hid_t dataset_id, bool print_info)
 {
 	float unit_scale = 1;
 	if (H5Aexists(dataset_id, "unit"))
@@ -116,10 +116,18 @@ float get_unit_scale(hid_t dataset_id)
 
 		if (strcmp(*unit, "nm") == 0)
 			unit_scale = 10;
+		else if (strcmp(*unit, "Bohr") == 0)
+			unit_scale = 0.52917721067;
 		else if (strcmp(*unit, "um") == 0)
 			unit_scale = 1e4;
 		else if (strcmp(*unit, "pm") == 0)
 			unit_scale = 1e-2;
+
+		if (print_info && !strcmp(*unit, "Angstrom") == 0)
+			printf("Info) The length unit is \"%s\" and will be convert to \"Angstrom\" with scale factor: %f.\n", *unit, unit_scale);
+
+		free(unit);
+		unit = NULL;
 	}
 	return unit_scale;
 }
@@ -131,8 +139,7 @@ int modify_information_about_file_content(struct h5md_file* file, char* group_na
 	char* full_path_position_dataset=concatenate_strings((const char*) group_name,(const char*) "/position/value");	
 	hid_t pos_dataset_id=H5Dopen2(file->file_id, full_path_position_dataset ,H5P_DEFAULT);
 
-	float pos_unit_scale = get_unit_scale(pos_dataset_id);
-	printf("Info) Convert the coordinate unit to Angstrom with the scale factor: %f.\n", pos_unit_scale);
+	float pos_unit_scale = get_unit_scale(pos_dataset_id, true);
 
 	free(full_path_position_dataset);
 
@@ -634,20 +641,23 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 	{
 		// timedependent dataset exists, use it
 		// read timedependent dataset
+
+		float unit_scale = get_unit_scale(box_timedependent_dataset_id, false);
+
 		int dims_box;
 		int is_cubic = h5md_get_length_of_one_dimensional_dataset(file, full_path_box_dataset_timeindependent, &dims_box);
 		if (is_cubic == 0){
 			float *data_box = malloc(file->ntime * 3 * 3 * sizeof(float));
 			H5Dread(box_timedependent_dataset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data_box);
-			vector_a[0] = data_box[time_i * 9 + 0];
-			vector_a[1] = data_box[time_i * 9 + 1];
-			vector_a[2] = data_box[time_i * 9 + 2];
-			vector_b[0] = data_box[time_i * 9 + 3];
-			vector_b[1] = data_box[time_i * 9 + 4];
-			vector_b[2] = data_box[time_i * 9 + 5];
-			vector_c[0] = data_box[time_i * 9 + 6];
-			vector_c[1] = data_box[time_i * 9 + 7];
-			vector_c[2] = data_box[time_i * 9 + 8];
+			vector_a[0] = data_box[time_i * 9 + 0] * unit_scale;
+			vector_a[1] = data_box[time_i * 9 + 1] * unit_scale;
+			vector_a[2] = data_box[time_i * 9 + 2] * unit_scale;
+			vector_b[0] = data_box[time_i * 9 + 3] * unit_scale;
+			vector_b[1] = data_box[time_i * 9 + 4] * unit_scale;
+			vector_b[2] = data_box[time_i * 9 + 5] * unit_scale;
+			vector_c[0] = data_box[time_i * 9 + 6] * unit_scale;
+			vector_c[1] = data_box[time_i * 9 + 7] * unit_scale;
+			vector_c[2] = data_box[time_i * 9 + 8] * unit_scale;
 			free(data_box);
 			status = 0;
 		}
@@ -655,15 +665,15 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 		{
 			float *data_box = malloc(file->ntime * 3 * sizeof(float));
 			H5Dread(box_timedependent_dataset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data_box);
-			vector_a[0] = data_box[time_i * 3 + 0];
+			vector_a[0] = data_box[time_i * 3 + 0] * unit_scale;
 			vector_a[1] = 0;
 			vector_a[2] = 0;
 			vector_b[0] = 0;
-			vector_b[1] = data_box[time_i * 3 + 1];
+			vector_b[1] = data_box[time_i * 3 + 1] * unit_scale;
 			vector_b[2] = 0;
 			vector_c[0] = 0;
 			vector_c[1] = 0;
-			vector_c[2] = data_box[time_i * 3 + 2];
+			vector_c[2] = data_box[time_i * 3 + 2] * unit_scale;
 			free(data_box);
 			status = 0;
 		}
@@ -673,6 +683,9 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 	{
 		// read timeindependent dataset
 		// decided whether box is cubic (dataset contains a vector) or triclinic (dataset contains a matrix)
+
+		float unit_scale = get_unit_scale(box_timeindependent_dataset_id, false);
+
 		int dims_box;
 		int is_cubic = h5md_get_length_of_one_dimensional_dataset(file, full_path_box_dataset_timeindependent, &dims_box);
 		float *data_box;
@@ -681,30 +694,30 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 		if (is_cubic == 0)
 		{
 			// box is cubic implies vector
-			vector_a[0] = data_box[0];
+			vector_a[0] = data_box[0] * unit_scale;
 			vector_a[1] = 0;
 			vector_a[2] = 0;
 			vector_b[0] = 0;
-			vector_b[1] = data_box[1];
+			vector_b[1] = data_box[1] * unit_scale;
 			vector_b[2] = 0;
 			vector_c[0] = 0;
 			vector_c[1] = 0;
-			vector_c[2] = data_box[2];
+			vector_c[2] = data_box[2] * unit_scale;
 			status = 0;
 		}
 		else
 		{
 			// box is triclinic implies matrix
 			// VMD expects system to be 3dimensional -> assume 3x3 matrix
-			vector_a[0] = data_box[0];
-			vector_a[1] = data_box[1];
-			vector_a[2] = data_box[2];
-			vector_b[0] = data_box[3];
-			vector_b[1] = data_box[4];
-			vector_b[2] = data_box[5];
-			vector_c[0] = data_box[6];
-			vector_c[1] = data_box[7];
-			vector_c[2] = data_box[8];
+			vector_a[0] = data_box[0] * unit_scale;
+			vector_a[1] = data_box[1] * unit_scale;
+			vector_a[2] = data_box[2] * unit_scale;
+			vector_b[0] = data_box[3] * unit_scale;
+			vector_b[1] = data_box[4] * unit_scale;
+			vector_b[2] = data_box[5] * unit_scale;
+			vector_c[0] = data_box[6] * unit_scale;
+			vector_c[1] = data_box[7] * unit_scale;
+			vector_c[2] = data_box[8] * unit_scale;
 			status = 0;
 		}
 	}
@@ -747,31 +760,29 @@ int get_box_information(struct h5md_file* file, int group_number, int time_i, h5
 	float vector_b[3];
 	float vector_c[3];
 	if(box_timedependent_dataset_id>=0){
-		float unit_scale = get_unit_scale(box_timedependent_dataset_id);
 		//timedependent dataset exists, use it
 		//read timedependent dataset 
 		
 		status=get_box_vectors(file, group_number, time_i, vector_a,vector_b,vector_c);
 		//according to VMD's molfile_timestep_t documentation
 		//process to angles and lengths
-		box->A=calculate_length_of_vector(vector_a,3)*unit_scale;
-		box->B=calculate_length_of_vector(vector_b,3)*unit_scale;
-		box->C=calculate_length_of_vector(vector_c,3)*unit_scale;
+		box->A=calculate_length_of_vector(vector_a,3);
+		box->B=calculate_length_of_vector(vector_b,3);
+		box->C=calculate_length_of_vector(vector_c,3);
 		box->alpha= calculate_angle_between_vectors(vector_b,vector_c,3);
 		box->beta= calculate_angle_between_vectors(vector_a,vector_c,3);
 		box->gamma= calculate_angle_between_vectors(vector_a,vector_b,3);
 	}else{
 		if(box_timeindependent_dataset_id>=0){
-			float unit_scale = get_unit_scale(box_timeindependent_dataset_id);
 			time_i=FALSE;
 			//read timeindependent dataset
 			//decided whether box is cubic (dataset contains a vector) or triclinic (dataset contains a matrix)
 			status=get_box_vectors(file, group_number, time_i, vector_a,vector_b,vector_c);
 			//according to VMD's molfile_timestep_t documentation
 			//process to angles and lengths
-			box->A=calculate_length_of_vector(vector_a,3)*unit_scale;
-			box->B=calculate_length_of_vector(vector_b,3)*unit_scale;
-			box->C=calculate_length_of_vector(vector_c,3)*unit_scale;
+			box->A=calculate_length_of_vector(vector_a,3);
+			box->B=calculate_length_of_vector(vector_b,3);
+			box->C=calculate_length_of_vector(vector_c,3);
 			box->alpha=calculate_angle_between_vectors(vector_b,vector_c,3);
 			box->beta=calculate_angle_between_vectors(vector_a,vector_c,3);
 			box->gamma=calculate_angle_between_vectors(vector_a,vector_b,3);
