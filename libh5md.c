@@ -695,21 +695,6 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 		{
 			// box is cubic implies vector
 			vector_a[0] = data_box[0] * unit_scale;
-			vector_a[1] = 0;
-			vector_a[2] = 0;
-			vector_b[0] = 0;
-			vector_b[1] = data_box[1] * unit_scale;
-			vector_b[2] = 0;
-			vector_c[0] = 0;
-			vector_c[1] = 0;
-			vector_c[2] = data_box[2] * unit_scale;
-			status = 0;
-		}
-		else
-		{
-			// box is triclinic implies matrix
-			// VMD expects system to be 3dimensional -> assume 3x3 matrix
-			vector_a[0] = data_box[0] * unit_scale;
 			vector_a[1] = data_box[1] * unit_scale;
 			vector_a[2] = data_box[2] * unit_scale;
 			vector_b[0] = data_box[3] * unit_scale;
@@ -720,10 +705,24 @@ int get_box_vectors(struct h5md_file *file, int group_i, int time_i, float *vect
 			vector_c[2] = data_box[8] * unit_scale;
 			status = 0;
 		}
+		else
+		{
+			// box is triclinic implies matrix
+			// VMD expects system to be 3dimensional -> assume 3x3 matrix
+			vector_a[0] = data_box[0] * unit_scale;
+			vector_a[1] = 0;
+			vector_a[2] = 0;
+			vector_b[0] = 0;
+			vector_b[1] = data_box[1] * unit_scale;
+			vector_b[2] = 0;
+			vector_c[0] = 0;
+			vector_c[1] = 0;
+			vector_c[2] = data_box[2] * unit_scale;
+			status = 0;
+		}
 	}
 	else
 	{
-		// printf("No box information found\n");
 		vector_a[0] = 0;
 		vector_a[1] = 0;
 		vector_a[2] = 0;
